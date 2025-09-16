@@ -1,10 +1,12 @@
 #include <stdio.h>
 
-typedef struct complex{
+struct complex{
   int real;
   int image;
-} complex;
+} ;
 
+
+typedef struct complex complex;
 
 complex add(complex n1, complex n2){
   complex sum;
@@ -15,7 +17,7 @@ complex add(complex n1, complex n2){
 
 complex multi(complex n1, complex n2){
   complex mul;
-  mul.real = n1.real + n2.real + n1.image * n2.image;
+  mul.real = n1.real * n2.real - n1.image * n2.image;
   mul.image = n1.real * n2.image + n1.image * n2.real;
   return mul;
 }
