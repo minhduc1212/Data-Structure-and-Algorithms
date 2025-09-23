@@ -1,164 +1,165 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdio.h> // Chỉ cần thư viện I/O cơ bản
 
-// Represents a railroad car (a node in the linked list)
-typedef struct Car {
-    char id;
-    int capacity;
-    int reservedPassengers;
-    struct Car* next;
-} Car;
+#define MAX_CARS 50 // Giả sử đoàn tàu có tối đa 50 toa
 
-// Represents the entire train (wrapper for the head of the list)
+// Cấu trúc cho một toa tàu (một node trong danh sách liên kết)
+typedef struct CarNode {
+    char id;              // Mã định danh của toa (ví dụ: 'A', 'B')
+    int capacity;         // Sức chứa tối đa
+    int passengers;       // Số hành khách hiện tại
+    struct CarNode *next; // Con trỏ tới toa tàu tiếp theo
+} CarNode;
+
+// Cấu trúc để quản lý cả đoàn tàu (danh sách liên kết)
 typedef struct {
-    Car* head;
+    CarNode *head; // Con trỏ trỏ tới toa đầu tiên
+    int length;    // Số lượng toa tàu hiện có
 } Train;
 
-// Function to create an empty train
-Train* createTrain() {
-    Train* train = (Train*)malloc(sizeof(Train));
-    if (!train) {
-        perror("Failed to allocate train");
-        return NULL;
+// ----- Bể chứa bộ nhớ tĩnh (Memory Pool) cho các toa tàu -----
+// Thay vì dùng malloc, chúng ta sẽ lấy các node từ mảng này.
+CarNode car_node_pool[MAX_CARS];
+int next_car_node_idx = 0; // Biến đếm để biết node tiếp theo còn trống
+
+// Hàm này thay thế cho malloc()
+// Nó "mượn" một node từ bể chứa và khởi tạo giá trị cho nó.
+CarNode* get_new_car_node(char id, int capacity, int passengers) {
+    // Kiểm tra xem bể chứa còn chỗ không
+    if (next_car_node_idx >= MAX_CARS) {
+        printf("LOI: Da het cho trong bai de xay toa tau moi!\n");
+        return NULL; // Trả về NULL nếu hết bộ nhớ
     }
-    train->head = NULL;
-    return train;
+
+    // Lấy con trỏ tới node tiếp theo còn trống trong bể chứa
+    CarNode* newNode = &car_node_pool[next_car_node_idx];
+    next_car_node_idx++; // Di chuyển chỉ số tới vị trí trống tiếp theo
+    
+    // Gán giá trị cho node mới
+    newNode->id = id;
+    newNode->capacity = capacity;
+    newNode->passengers = passengers;
+    newNode->next = NULL; // Node mới luôn là node cuối, nên next là NULL
+    
+    return newNode;
+}
+// Hàm 1: Khởi tạo một đoàn tàu rỗng
+void create_train(Train *t) {
+    t->head = NULL;
+    t->length = 0;
 }
 
-// Adds a new car to the end of the train
-void addCar(Train* train, char id, int capacity, int reservedPassengers) {
-    if (reservedPassengers > capacity) {
-        printf("Error: Reserved passengers (%d) cannot exceed capacity (%d) for car %c.\n",
-               reservedPassengers, capacity, id);
+// Hàm 2: Thêm một toa tàu mới vào cuối đoàn
+void add_car(Train *t, char id, int capacity, int passengers) {
+    // Yêu cầu: Số khách phải nhỏ hơn hoặc bằng sức chứa
+    if (passengers > capacity) {
+        printf("Thong bao: So khach (%d) cua toa %c vuot suc chua (%d). Tu dong giam so khach ve mức tối đa.\n", 
+               passengers, id, capacity);
+        passengers = capacity;
+    }
+    
+    // Lấy một toa tàu mới từ bể chứa
+    CarNode* newCar = get_new_car_node(id, capacity, passengers);
+    if (newCar == NULL) {
+        // Nếu get_new_car_node trả về NULL, dừng hàm lại
         return;
     }
 
-    Car* newCar = (Car*)malloc(sizeof(Car));
-    if (!newCar) {
-        perror("Failed to allocate new car");
-        return;
-    }
-    newCar->id = id;
-    newCar->capacity = capacity;
-    newCar->reservedPassengers = reservedPassengers;
-    newCar->next = NULL;
-
-    // If the train is empty, the new car becomes the head
-    if (train->head == NULL) {
-        train->head = newCar;
-    } else {
-        // Otherwise, find the last car and attach the new one
-        Car* current = train->head;
+    // Nếu đoàn tàu đang rỗng, toa mới sẽ là toa đầu tiên
+    if (t->head == NULL) {
+        t->head = newCar;
+    } else { 
+        // Nếu không, đi đến cuối đoàn tàu để nối toa mới vào
+        CarNode *current = t->head;
         while (current->next != NULL) {
             current = current->next;
         }
-        current->next = newCar;
+        current->next = newCar; // Nối toa mới vào đuôi
     }
+    t->length++; // Tăng số lượng toa lên 1
 }
 
-// Removes all cars that have no passengers
-void removeEmptyCars(Train* train) {
-    Car* current = train->head;
-    Car* prev = NULL;
+// Hàm 3: Loại bỏ các toa không có hành khách (passengers == 0)
+void remove_empty_cars(Train *t) {
+    CarNode *current = t->head;
+    CarNode *prev = NULL;
 
+    // Duyệt qua từng toa tàu
     while (current != NULL) {
-        if (current->reservedPassengers == 0) {
-            printf("Removing empty car %c...\n", current->id);
-            Car* to_delete = current;
-            if (prev == NULL) { // The car to be removed is the head
-                train->head = current->next;
-                current = train->head;
-            } else { // The car is in the middle or at the end
-                prev->next = current->next;
-                current = prev->next;
+        // Nếu tìm thấy toa rỗng
+        if (current->passengers == 0) {
+            printf("Thong bao: Loai bo toa %c vi khong co hanh khach.\n", current->id);
+            
+            // Trường hợp 1: Toa rỗng là toa đầu tiên
+            if (prev == NULL) {
+                t->head = current->next; // Cập nhật head để trỏ tới toa thứ hai
+            } else { // Trường hợp 2: Toa rỗng ở giữa hoặc cuối
+                prev->next = current->next; // Nối toa trước đó với toa ngay sau toa bị xóa
             }
-            free(to_delete);
+            
+            // Di chuyển con trỏ current tới toa tiếp theo để kiểm tra
+            CarNode *node_to_remove = current;
+            current = current->next;
+            
+            // Giảm số lượng toa. Lưu ý: chúng ta không "free" bộ nhớ vì không dùng malloc.
+            t->length--;
         } else {
-            // Move to the next car
+            // Nếu toa không rỗng, di chuyển cả hai con trỏไปข้างหน้า
             prev = current;
             current = current->next;
         }
     }
 }
 
-// Displays information for all cars in the train
-void displayCars(const Train* train) {
-    if (train->head == NULL) {
-        printf("The train is empty.\n");
+// Hàm 4: Hiển thị thông tin đoàn tàu
+void display_train(Train *t) {
+    printf("\n--- THONG TIN DOAN TAU ---\n");
+    printf("So luong toa hien tai: %d\n", t->length);
+    
+    if (t->head == NULL) {
+        printf("Doan tau rong.\n");
+        printf("---------------------------\n");
         return;
     }
-    printf("Train Cars Information:\n");
-    Car* current = train->head;
+    
+    CarNode *current = t->head;
+    int car_number = 1;
     while (current != NULL) {
-        printf("  - Car ID: %c | Capacity: %d | Reserved: %d\n",
-               current->id, current->capacity, current->reservedPassengers);
+        printf("  Toa %d: [ID: %c, So khach: %d/%d]\n", 
+               car_number, current->id, current->passengers, current->capacity);
         current = current->next;
+        car_number++;
     }
+    printf("---------------------------\n");
 }
-
-// Displays the total number of cars in the train
-void displayLength(const Train* train) {
-    int count = 0;
-    Car* current = train->head;
-    while (current != NULL) {
-        count++;
-        current = current->next;
-    }
-    printf("The train has %d car(s).\n", count);
-}
-
-// Frees all memory associated with the train
-void freeTrain(Train* train) {
-    if (train) {
-        Car* current = train->head;
-        while (current != NULL) {
-            Car* next = current->next;
-            free(current);
-            current = next;
-        }
-        free(train);
-    }
-}
-
-int main_train() { // Renamed to avoid conflict if both mains are in one file
-    printf("--- Exercise 2: Railway Train ---\n");
-    Train* myTrain = createTrain();
-    if (!myTrain) return 1;
-
-    addCar(myTrain, 'A', 50, 30);
-    addCar(myTrain, 'B', 40, 0);  // Empty car
-    addCar(myTrain, 'C', 60, 55);
-    addCar(myTrain, 'D', 30, 0);  // Empty car
-
-    printf("Initial train information:\n");
-    displayCars(myTrain);
-    displayLength(myTrain);
-
-    printf("\nRemoving empty cars...\n");
-    removeEmptyCars(myTrain);
-
-    printf("\nTrain information after removing empty cars:\n");
-    displayCars(myTrain);
-    displayLength(myTrain);
-
-    printf("\nAdding a new car...\n");
-    addCar(myTrain, 'E', 70, 65);
-
-    printf("\nFinal train information:\n");
-    displayCars(myTrain);
-    displayLength(myTrain);
-
-    freeTrain(myTrain); // Clean up memory
-    return 0;
-}
-
-// You can compile and run each exercise separately.
-// To run Exercise 2, rename main_train() to main() and compile.
-// I will combine them into a single runnable file.
-
 int main() {
-    main(); // Calls the UnboundedInteger main
-    printf("\n=======================================\n\n");
-    main_train(); // Calls the Train main
+    // Tạo một đoàn tàu mới
+    Train my_train;
+    create_train(&my_train);
+
+    printf("Buoc 1: Khoi tao doan tau voi cac toa ban dau.\n");
+    // Thêm các toa tàu ban đầu
+    add_car(&my_train, 'A', 100, 80);
+    add_car(&my_train, 'B', 80, 0);   
+    add_car(&my_train, 'C', 120, 120);
+    add_car(&my_train, 'D', 90, 50);
+    add_car(&my_train, 'E', 70, 0);   
+
+    // Hiển thị trạng thái ban đầu
+    display_train(&my_train);
+
+    // Thực hiện chức năng xóa các toa rỗng
+    printf("\nBuoc 2: Thuc hien loai bo cac toa tau rong...\n");
+    remove_empty_cars(&my_train);
+    
+    // Hiển thị trạng thái sau khi dọn dẹp
+    display_train(&my_train);
+    
+    // Thử thêm một toa mới để đảm bảo đoàn tàu vẫn hoạt động
+    printf("\nBuoc 3: Them mot toa tau G moi vao cuoi...\n");
+    add_car(&my_train, 'G', 150, 160); // Thử trường hợp quá tải để kiểm tra
+    
+    // Hiển thị trạng thái cuối cùng
+    display_train(&my_train);
+
     return 0;
 }
