@@ -72,7 +72,6 @@ void displayItems(Item items[], int numItems) {
     for (int i = 0; i < numItems; ++i) {
         printf("Product: %s, The quantity: %d\n", items[i].name, items[i].quantity);
     }
-    printf("---------------------------\n\n");
 }
 
 int main(){
