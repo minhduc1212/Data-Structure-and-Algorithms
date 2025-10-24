@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-typedef struct {
+typedef struct UnboundedInt {
     int digits[100];
     int count;           
 } UnboundedInt;

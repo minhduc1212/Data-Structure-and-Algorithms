@@ -25,8 +25,6 @@ typedef struct CustomerQueue {
     int back;
 } CustomerQueue;
 
-
-// Các hàm logic của bạn được giữ nguyên
 void init (CustomerQueue* qc){
     qc->front = 0;
     qc->back = 0;

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+  
 typedef struct Website{
     char url[100];
     char title[100];

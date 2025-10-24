@@ -4,7 +4,7 @@
 
 bool check_sphenic_rec(int n, int i, int *count){
     if (n == 1){
-        (*count)++;
+        return (*count == 3);
     } 
     if (*count > 3){
         return false;

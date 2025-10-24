@@ -38,9 +38,7 @@ int main()
     for (int i = 0; i < 6; i++)
     {
         find_sec_num(arr, arr_pow, 6, 0, i);
-    }
-
-   
+    }   
 
     return 0;
 }
